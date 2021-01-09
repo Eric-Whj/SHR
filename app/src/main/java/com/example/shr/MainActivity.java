@@ -41,7 +41,7 @@ public class MainActivity extends AppCompatActivity {
     private static final int REQUEST_READ_EXTERNAL_STORAGE = 2987;
     private static final int REQUEST_WRITE_EXTERNAL_STORAGE = 7829;
     private static final String TAG = "MainActivity";
-
+    private String string;
 
     private Activity activity;
     Travel_database travel_database;//define the database
