@@ -22,6 +22,8 @@ import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 import android.view.View;
 import android.content.res.Resources;
+import android.widget.ImageView;
+import android.widget.ZoomControls;
 
 import com.baidu.location.BDAbstractLocationListener;
 import com.baidu.location.BDLocation;
@@ -73,6 +75,13 @@ public class MainActivity extends AppCompatActivity {
 
         //获取地图控件
         mMapView = (MapView) findViewById(R.id.bmapView);
+        mMapView.showZoomControls(false);
+
+        View baiduLogo = mMapView.getChildAt(1);
+        if (baiduLogo != null && (baiduLogo instanceof ImageView || baiduLogo instanceof ZoomControls)) {
+            baiduLogo.setVisibility(View.INVISIBLE);
+        }
+
         mBaiduMap = mMapView.getMap();
         mBaiduMap.setMyLocationEnabled(true);
         mBaiduMap.setMapType(BaiduMap.MAP_TYPE_NORMAL);
