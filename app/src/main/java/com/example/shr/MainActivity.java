@@ -23,6 +23,16 @@ import android.support.v7.widget.Toolbar;
 import android.view.View;
 import android.content.res.Resources;
 
+import com.baidu.location.BDAbstractLocationListener;
+import com.baidu.location.BDLocation;
+import com.baidu.location.LocationClient;
+import com.baidu.location.LocationClientOption;
+import com.baidu.mapapi.map.BaiduMap;
+import com.baidu.mapapi.map.MapStatus;
+import com.baidu.mapapi.map.MapStatusUpdateFactory;
+import com.baidu.mapapi.map.MapView;
+import com.baidu.mapapi.map.MyLocationData;
+import com.baidu.mapapi.model.LatLng;
 import com.example.shr.database.Photo_data;
 import com.example.shr.database.Travel_DAO;
 import com.example.shr.database.Travel_database;
@@ -42,6 +52,11 @@ public class MainActivity extends AppCompatActivity {
     private static final int REQUEST_WRITE_EXTERNAL_STORAGE = 7829;
     private static final String TAG = "MainActivity";
 
+    //声明地图控件
+    private MapView mMapView = null;
+    private BaiduMap mBaiduMap;
+    private LocationClient mLocationClient;
+    private boolean isFirstLoc = true;
 
     private Activity activity;
     Travel_database travel_database;//define the database
@@ -56,9 +71,37 @@ public class MainActivity extends AppCompatActivity {
         checkPermissions(getApplicationContext());
         activity = this;
 
+        //获取地图控件
+        mMapView = (MapView) findViewById(R.id.bmapView);
+        mBaiduMap = mMapView.getMap();
+        mBaiduMap.setMyLocationEnabled(true);
+        mBaiduMap.setMapType(BaiduMap.MAP_TYPE_NORMAL);
+
+        // 通过 LocationClient 发起定位
+        //定位初始化
+        mLocationClient = new LocationClient(getApplicationContext());
+
+        //通过LocationClientOption设置LocationClient相关参数
+        LocationClientOption option = new LocationClientOption();
+        option.setOpenGps(true); // 打开gps
+        option.setNeedDeviceDirect(true);
+        option.setLocationMode(LocationClientOption.LocationMode.Hight_Accuracy);
+        option.setCoorType("bd09ll"); // 设置坐标类型
+        option.setScanSpan(1000);
+
+        //设置locationClientOption
+        mLocationClient.setLocOption(option);
+
+        //注册LocationListener监听器
+        MyLocationListener myLocationListener = new MyLocationListener();
+        mLocationClient.registerLocationListener(myLocationListener);
+        //开启地图定位图层
+        mLocationClient.start();
+
+
         travel_database = Room.databaseBuilder(this,Travel_database.class,"traveldatabse")
                 .allowMainThreadQueries()
-                .build();//bulid the database
+                .build();//build the database
         travel_dao = travel_database.getTravel_DAO();
 
         initEasyImage();
@@ -72,6 +115,35 @@ public class MainActivity extends AppCompatActivity {
         });
 
 
+    }
+
+    public class MyLocationListener extends BDAbstractLocationListener {
+        @Override
+        public void onReceiveLocation(BDLocation location) {
+            //mapView 销毁后不在处理新接收的位置
+            if (location == null || mMapView == null){
+                return;
+            }
+
+//            MarkPoints mMarker = new MarkPoints();
+//            mMarker.markPoint(mBaiduMap, location.getLongitude(), location.getLatitude());
+
+            MyLocationData locData = new MyLocationData.Builder()
+                    .accuracy(location.getRadius())
+                    // 此处设置开发者获取到的方向信息，顺时针0-360
+                    .direction(location.getDirection()).latitude(location.getLatitude())
+                    .longitude(location.getLongitude()).build();
+            mBaiduMap.setMyLocationData(locData);
+
+            if (isFirstLoc) {
+                isFirstLoc = false;
+                LatLng ll = new LatLng(location.getLatitude(),
+                        location.getLongitude());
+                MapStatus.Builder builder = new MapStatus.Builder();
+                builder.target(ll).zoom(18.0f);
+                mBaiduMap.animateMapStatus(MapStatusUpdateFactory.newMapStatus(builder.build()));
+            }
+        }
     }
 
     static class InsertAsyncTask extends AsyncTask<Photo_data,Void,Void> {
@@ -225,5 +297,26 @@ public class MainActivity extends AppCompatActivity {
 
     public Activity getActivity() {
         return activity;
+    }
+
+    @Override
+    protected void onResume() {
+        mMapView.onResume();
+        super.onResume();
+    }
+
+    @Override
+    protected void onPause() {
+        mMapView.onPause();
+        super.onPause();
+    }
+
+    @Override
+    protected void onDestroy() {
+        mLocationClient.stop();
+        mBaiduMap.setMyLocationEnabled(false);
+        mMapView.onDestroy();
+        mMapView = null;
+        super.onDestroy();
     }
 }
