@@ -9,6 +9,7 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
 import android.media.Image;
@@ -67,7 +68,7 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onClick(View view) {
                 EasyImage.openCamera(getActivity(), 0);
-                //添加获取经纬度代码
+
             }
         });
 
@@ -162,12 +163,16 @@ public class MainActivity extends AppCompatActivity {
             public void onImagesPicked(List<File> imageFiles, EasyImage.ImageSource source, int type) {
 
                 //onPhotosReturned(imageFiles);//处理得到的照片，保存
+                File file;
+                file = imageFiles.get(imageFiles.size()-1);
+                Bitmap mBitmap = BitmapFactory.decodeFile(file.getPath());
                 byte[] i;
                 String time;
                 time = getTime();
-                i = getPicture((Drawable) imageFiles);
+                i = Bitmap2Bytes(mBitmap);
                 Photo_data photo_data = new Photo_data("Chengdu",time,"2","1",i);
-                travel_dao.insertPicture(photo_data);
+                //travelViewModel.insertPicture(photo_data);
+                new InsertAsyncTask(travel_dao).execute(photo_data);
             }
 
             @Override
@@ -181,19 +186,14 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
+    private byte[] Bitmap2Bytes(Bitmap bm) {
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        bm.compress(Bitmap.CompressFormat.PNG, 100, baos);
+        return baos.toByteArray();
+    }
+
     private void onPhotosReturned(List<File> returnedPhotos) {
         //将照片添加到主页面，在此处返回到数据库
-        byte[] i;
-        String time;
-        time = getTime();
-       // Resources res =getResources();
-        //Drawable drawable = res.getDrawable(returnedPhotos);
-        i = getPicture((Drawable) returnedPhotos);//将照片输出为byte[]形式方便存入数据库
-
-        Photo_data photo_data = new Photo_data("Chengdu","1","2","1",null);
-        travel_dao.insertPicture(photo_data);
-        //new InsertAsyncTask(travel_dao).execute(photo_data);
-
     }
 
     private void getLongAndLatitude() {
@@ -207,21 +207,6 @@ public class MainActivity extends AppCompatActivity {
         String str = formatter.format(curDate);
         return str;
     }
-
-
-
-    private byte[] getPicture(Drawable drawable) {
-        //Change the image to the type of byte[]
-        if(drawable == null) {
-            return null;
-        }
-        BitmapDrawable bd = (BitmapDrawable) drawable;
-        Bitmap bitmap = bd.getBitmap();
-        ByteArrayOutputStream os = new ByteArrayOutputStream();
-        bitmap.compress(Bitmap.CompressFormat.PNG, 100, os);
-        return os.toByteArray();
-    }
-
 
     public Activity getActivity() {
         return activity;
